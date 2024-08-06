@@ -1,11 +1,9 @@
 import type { Request, Response } from "express";
 import PlantModel from "../models/plants";
+import type { TypePlantToLoadResponse } from "../types/plant";
 import httpStatusCodes from "../utils/httpStatusCode";
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-type Plant = Record<string, any>;
-
-async function getAll(req: Request, res: Response) {
+async function getAllPlanting(req: Request, res: Response) {
 	try {
 		const plants = await PlantModel.find();
 		return res.status(httpStatusCodes.OK).json(plants);
@@ -16,47 +14,58 @@ async function getAll(req: Request, res: Response) {
 	}
 }
 
-async function addProduct(req: Request, res: Response) {
+async function addPlanting(req: Request, res: Response) {
 	try {
-		const productData = req.body;
-		const createdProduct = await PlantModel.create(productData);
-		return res.status(httpStatusCodes.OK).json(createdProduct);
+		const { cradle } = req.body;
+
+		const existingPlanting = await PlantModel.findOne({ cradle });
+		if (existingPlanting) {
+			return res
+				.status(httpStatusCodes.BAD_REQUEST)
+				.json({ message: "A planting with this cradle already exists." });
+		}
+
+		const createdPlanting = await PlantModel.create(req.body);
+		return res.status(httpStatusCodes.CREATED).json(createdPlanting);
 	} catch (err) {
+		console.error(err);
 		return res
 			.status(httpStatusCodes.INTERNAL_SERVER_ERROR)
-			.send("Error creating product");
+			.send("Error creating Planting");
 	}
 }
 
-async function deleteProduct(req: Request, res: Response) {
+async function deletePlating(req: Request, res: Response) {
 	const { id } = req.params;
 
 	try {
-		const productToDelete = await PlantModel.findById(id);
+		const PlatingToDelete = await PlantModel.findById(id);
 
-		if (!productToDelete) {
-			return res.status(httpStatusCodes.NOT_FOUND).send("Product not found");
+		if (!PlatingToDelete) {
+			return res.status(httpStatusCodes.NOT_FOUND).send("Plating not found");
 		}
 
-		await productToDelete.deleteOne();
+		await PlatingToDelete.deleteOne();
 
-		return res.status(httpStatusCodes.OK).send("Product deleted successfully");
+		return res.status(httpStatusCodes.OK).send("Plating deleted successfully");
 	} catch (err) {
 		return res
 			.status(httpStatusCodes.INTERNAL_SERVER_ERROR)
-			.send("Error deleting product");
+			.send("Error deleting Plating");
 	}
 }
 
-async function updateProduct(req: Request, res: Response) {
+async function updatePlanting(req: Request, res: Response) {
 	const { id } = req.params;
 	const updateData = req.body;
 
 	try {
-		const plantToUpdate = (await PlantModel.findById(id)) as Plant;
+		const plantToUpdate = (await PlantModel.findById(
+			id,
+		)) as TypePlantToLoadResponse;
 
 		if (!plantToUpdate) {
-			return res.status(httpStatusCodes.NOT_FOUND).send("Product not found");
+			return res.status(httpStatusCodes.NOT_FOUND).send("Planting not found");
 		}
 
 		for (const key of Object.keys(updateData)) {
@@ -71,8 +80,8 @@ async function updateProduct(req: Request, res: Response) {
 	} catch (err) {
 		return res
 			.status(httpStatusCodes.INTERNAL_SERVER_ERROR)
-			.send("Error updating product");
+			.send("Error updating Planting");
 	}
 }
 
-export { addProduct, deleteProduct, getAll, updateProduct };
+export { addPlanting, deletePlating, getAllPlanting, updatePlanting };
